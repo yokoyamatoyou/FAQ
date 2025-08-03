@@ -207,10 +207,10 @@ with col2:
                     while generated < target_count:
                         num_to_generate = min(block_size, target_count - generated)
                         with st.spinner(f"カテゴリ「{category}」のQ&Aを生成中..."):
-                            qa_pairs = generator.generate_qa_for_category(text_content, category, current_temp, num_questions=num_to_generate)
+                            result = generator.generate_qa_for_category(text_content, category, current_temp, num_questions=num_to_generate)
 
-                        if qa_pairs and not any("error" in qa for qa in qa_pairs):
-                            for qa in qa_pairs:
+                        if result and not result.get("error"):
+                            for qa in result.get("qa_pairs", []):
                                 qa_data = {
                                     "category": category,
                                     "question": qa.get("question", ""),
@@ -220,23 +220,16 @@ with col2:
                                     "temperature": current_temp,
                                 }
                                 st.session_state.qa_data.append(qa_data)
-                            generated += len(qa_pairs)
+                            generated += len(result.get("qa_pairs", []))
 
                             while generated >= next_step:
                                 current_temp = increment_temperature(current_temp)
                                 next_step += step
                         else:
-                            error_messages = []
-                            if qa_pairs:
-                                for qa in qa_pairs:
-                                    if isinstance(qa, dict) and "error" in qa:
-                                        error_messages.append(qa.get("error", str(qa)))
-                                    elif isinstance(qa, str):
-                                        error_messages.append(qa)
-                            if not error_messages:
-                                error_messages = ["Q&Aの生成中に不明なエラーが発生しました"]
-                            for msg in error_messages:
-                                st.error(f"カテゴリ「{category}」でエラーが発生しました: {msg}")
+                            error_message = result.get("error") if isinstance(result, dict) else None
+                            if not error_message:
+                                error_message = "Q&Aの生成中に不明なエラーが発生しました"
+                            st.error(f"カテゴリ「{category}」でエラーが発生しました: {error_message}")
                             st.info("問題が解消したら再度お試しください。")
                             all_success = False
                             break
