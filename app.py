@@ -46,7 +46,15 @@ with st.sidebar:
         help="OpenAI APIキーを入力してください"
     )
     st.session_state.api_key = api_key
-    
+
+    num_categories = st.number_input(
+        "生成するカテゴリ数",
+        min_value=1,
+        value=3,
+        step=1,
+        help="生成されるカテゴリの数",
+    )
+
     # 生成する質問数とブロックサイズ
     question_mode = st.radio(
         "質問数の指定方法",
@@ -147,7 +155,7 @@ with col2:
         
         if st.button("カテゴリとQ&Aを生成"):
             with st.spinner("カテゴリを生成中..."):
-                categories = generator.generate_categories(text_content, 0.0)
+                categories = generator.generate_categories(text_content, 0.0, num_categories)
             
             if categories and not any("エラー" in str(cat) for cat in categories):
                 st.success(f"カテゴリが生成されました: {', '.join(categories)}")
@@ -155,10 +163,10 @@ with col2:
                 # 各カテゴリでQ&Aを生成
                 if question_mode == "全カテゴリ合計質問数":
                     total_questions = num_questions_input
-                    num_categories = len(categories)
-                    base = total_questions // num_categories
-                    remainder = total_questions % num_categories
-                    per_category_counts = [base + (1 if i < remainder else 0) for i in range(num_categories)]
+                    generated_category_count = len(categories)
+                    base = total_questions // generated_category_count
+                    remainder = total_questions % generated_category_count
+                    per_category_counts = [base + (1 if i < remainder else 0) for i in range(generated_category_count)]
                 else:
                     per_category_counts = [num_questions_input] * len(categories)
 
