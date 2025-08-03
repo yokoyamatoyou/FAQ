@@ -11,6 +11,7 @@ from qna_generator.data_exporter import (
     export_for_rag,
     export_for_finetuning,
 )
+from qna_generator.utils import calculate_temperature_step, increment_temperature
 
 
 def _has_error_prefix(value: str) -> bool:
@@ -173,6 +174,8 @@ with col2:
                 for category, target_count in zip(categories, per_category_counts):
                     current_temp = 0.0
                     generated = 0
+                    step = calculate_temperature_step(target_count)
+                    next_step = step
                     while generated < target_count:
                         num_to_generate = min(block_size, target_count - generated)
                         with st.spinner(f"カテゴリ「{category}」のQ&Aを生成中..."):
@@ -190,7 +193,10 @@ with col2:
                                 }
                                 st.session_state.qa_data.append(qa_data)
                             generated += len(qa_pairs)
-                            current_temp = min(current_temp + 0.1, 0.8)
+
+                            while generated >= next_step:
+                                current_temp = increment_temperature(current_temp)
+                                next_step += step
                         else:
                             break
 
