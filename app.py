@@ -160,7 +160,7 @@ with col2:
             
             if categories and not any("エラー" in str(cat) for cat in categories):
                 st.success(f"カテゴリが生成されました: {', '.join(categories)}")
-                
+
                 # 各カテゴリでQ&Aを生成
                 if question_mode == "全カテゴリ合計質問数":
                     total_questions = num_questions_input
@@ -171,6 +171,7 @@ with col2:
                 else:
                     per_category_counts = [num_questions_input] * len(categories)
 
+                all_success = True
                 for category, target_count in zip(categories, per_category_counts):
                     current_temp = 0.0
                     generated = 0
@@ -198,11 +199,26 @@ with col2:
                                 current_temp = increment_temperature(current_temp)
                                 next_step += step
                         else:
+                            error_messages = []
+                            if qa_pairs:
+                                for qa in qa_pairs:
+                                    if isinstance(qa, dict) and "error" in qa:
+                                        error_messages.append(qa.get("error", str(qa)))
+                                    elif isinstance(qa, str):
+                                        error_messages.append(qa)
+                            if not error_messages:
+                                error_messages = ["Q&Aの生成中に不明なエラーが発生しました"]
+                            for msg in error_messages:
+                                st.error(f"カテゴリ「{category}」でエラーが発生しました: {msg}")
+                            st.info("問題が解消したら再度お試しください。")
+                            all_success = False
                             break
 
-                st.success("Q&Aの生成が完了しました")
+                if all_success:
+                    st.success("Q&Aの生成が完了しました")
             else:
                 st.error(f"カテゴリ生成エラー: {categories}")
+                st.info("設定を確認して再度お試しください。")
     
     elif not st.session_state.api_key:
         st.warning("OpenAI APIキーを入力してください")
