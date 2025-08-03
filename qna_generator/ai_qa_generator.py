@@ -49,15 +49,16 @@ class AIQAGenerator:
         qa_list = []
         lines = qa_text.split("\n")
         current_qa = {}
-        key_pattern = re.compile(r"^(質問|回答|引用元)\s*\d*")
+        key_pattern = re.compile(r"^(質問|回答|引用元)\s*\d*$")
         for line in lines:
             line = line.strip()
             if not line:
                 continue
-            if ":" not in line:
+            segments = [seg.strip() for seg in line.split(":", 1)]
+            if len(segments) != 2:
                 logger.warning("Skipping malformed line: %s", line)
                 continue
-            key_part, value_part = [seg.strip() for seg in line.split(":", 1)]
+            key_part, value_part = segments
             if not key_part or not value_part:
                 logger.warning("Skipping malformed line: %s", line)
                 continue
