@@ -74,16 +74,15 @@ with col1:
                 with st.spinner("テキストを抽出中..."):
                     try:
                         result = extract_text_from_url(url)
-                        if isinstance(result, str) and result.startswith(
-                            "URLからのテキスト抽出エラー"
-                        ):
+                    except requests.exceptions.RequestException as e:
+                        st.error(str(e))
+                    else:
+                        if isinstance(result, str) and result.startswith("Error:"):
                             st.error(result)
                         else:
                             text_content = result
                             source_info = f"URL: {url}"
                             st.success("テキストの抽出が完了しました")
-                    except requests.exceptions.RequestException as e:
-                        st.error(str(e))
             else:
                 st.error("URLを入力してください")
     
@@ -100,20 +99,15 @@ with col1:
                 with st.spinner("テキストを抽出中..."):
                     try:
                         result = extract_text_from_uploaded_file(uploaded_file, file_type)
-                        if isinstance(result, str) and result.startswith(
-                            (
-                                "PDFからのテキスト抽出エラー",
-                                "DOCXからのテキスト抽出エラー",
-                                "サポートされていないファイル形式",
-                            )
-                        ):
+                    except Exception as e:
+                        st.error(str(e))
+                    else:
+                        if isinstance(result, str) and result.startswith("Error:"):
                             st.error(result)
                         else:
                             text_content = result
                             source_info = f"ファイル: {uploaded_file.name}"
                             st.success("テキストの抽出が完了しました")
-                    except Exception as e:
-                        st.error(str(e))
     
     # 抽出されたテキストの表示
     if text_content:
