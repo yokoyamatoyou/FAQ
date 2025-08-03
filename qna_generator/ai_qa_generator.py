@@ -10,8 +10,8 @@ class AIQAGenerator:
     def __init__(self, api_key):
         self.client = OpenAI(api_key=api_key)
 
-    def generate_categories(self, text, temperature=0.0):
-        prompt = f"""以下のテキストから、関連性の高いカテゴリを3つ提案してください。カテゴリは簡潔な名詞で、カンマ区切りで出力してください。\n\nテキスト:\n{text}\n\nカテゴリ:"""
+    def generate_categories(self, text, temperature=0.0, num_categories=3):
+        prompt = f"""以下のテキストから、関連性の高いカテゴリを{num_categories}つ提案してください。カテゴリは簡潔な名詞で、カンマ区切りで出力してください。\n\nテキスト:\n{text}\n\nカテゴリ:"""
         try:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",  # GPT-4.1 nanoの代わりにgpt-4o-miniを使用
@@ -23,7 +23,7 @@ class AIQAGenerator:
                 max_tokens=50
             )
             categories = response.choices[0].message.content.strip()
-            return [c.strip() for c in categories.split(",")]
+            return [c.strip() for c in categories.split(",")][:num_categories]
         except Exception as e:
             return [f"カテゴリ生成エラー: {e}"]
 
