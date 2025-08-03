@@ -14,9 +14,8 @@ git clone <repository-url>
 cd FAQ
 python -m venv .venv
 source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
-pip install streamlit openai requests beautifulsoup4 python-docx pymupdf
+pip install -r requirements.txt
 ```
-*If a `requirements.txt` file becomes available, you can install dependencies with `pip install -r requirements.txt` instead.*
 
 ## Running the Streamlit app
 
