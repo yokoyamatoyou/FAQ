@@ -6,15 +6,17 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class AIQAGenerator:
-    def __init__(self, api_key):
+    def __init__(self, api_key, model="gpt-4o-mini"):
         self.client = OpenAI(api_key=api_key)
+        self.model = model
 
     def generate_categories(self, text, temperature=0.0, num_categories=3):
         prompt = f"""以下のテキストから、関連性の高いカテゴリを{num_categories}つ提案してください。カテゴリは簡潔な名詞で、カンマ区切りで出力してください。\n\nテキスト:\n{text}\n\nカテゴリ:"""
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # GPT-4.1 nanoの代わりにgpt-4o-miniを使用
+                model=self.model,
                 messages=[
                     {"role": "system", "content": "あなたはテキストからカテゴリを抽出するAIアシスタントです。"},
                     {"role": "user", "content": prompt}
@@ -44,7 +46,7 @@ class AIQAGenerator:
         )
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # GPT-4.1 nanoの代わりにgpt-4o-miniを使用
+                model=self.model,
                 messages=[
                     {"role": "system", "content": "あなたはテキストから質問と回答を生成するAIアシスタントです。回答は必ず提供されたテキストの内容のみから生成し、引用元を明確にしてください。"},
                     {"role": "user", "content": prompt}

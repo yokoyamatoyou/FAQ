@@ -27,7 +27,19 @@ pip install -r requirements.txt
     ```bash
     streamlit run app.py
     ```
-3. A browser window will open. Enter an API key if you didn't set one, then provide a URL or upload a PDF/DOCX file to generate Q&A pairs.
+3. A browser window will open. Enter an API key if you didn't set one, choose an OpenAI model in the sidebar (defaults to `gpt-4o-mini`), then provide a URL or upload a PDF/DOCX file to generate Q&A pairs.
+
+## Model configuration
+
+The "Settings" sidebar includes a **model** selector. The chosen model is used for both category and Q&A generation.
+Supported options include `gpt-4o-mini` and `gpt-4o`.
+
+When using the generator programmatically, pass the model name to `AIQAGenerator`:
+
+```python
+from qna_generator.ai_qa_generator import AIQAGenerator
+generator = AIQAGenerator(api_key="YOUR_API_KEY", model="gpt-4o")
+```
 
 ## Documentation
 

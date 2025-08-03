@@ -30,6 +30,8 @@ if 'qa_data' not in st.session_state:
     st.session_state.qa_data = []
 if 'api_key' not in st.session_state:
     st.session_state.api_key = ""
+if 'model' not in st.session_state:
+    st.session_state.model = "gpt-4o-mini"
 
 # タイトル
 st.title("🤖 Q&A自動生成システム")
@@ -47,6 +49,14 @@ with st.sidebar:
         help="OpenAI APIキーを入力してください"
     )
     st.session_state.api_key = api_key
+
+    model = st.selectbox(
+        "使用するモデル",
+        ["gpt-4o-mini", "gpt-4o"],
+        index=["gpt-4o-mini", "gpt-4o"].index(st.session_state.model),
+        help="OpenAIのモデルを選択してください",
+    )
+    st.session_state.model = model
 
     num_categories = st.number_input(
         "生成するカテゴリ数",
@@ -152,7 +162,7 @@ with col2:
     st.header("Q&A生成")
     
     if text_content and st.session_state.api_key:
-        generator = AIQAGenerator(st.session_state.api_key)
+        generator = AIQAGenerator(st.session_state.api_key, model=st.session_state.model)
         
         if st.button("カテゴリとQ&Aを生成"):
             with st.spinner("カテゴリを生成中..."):
