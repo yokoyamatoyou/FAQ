@@ -48,13 +48,27 @@ with st.sidebar:
     st.session_state.api_key = api_key
     
     # 生成する質問数とブロックサイズ
-    num_questions = st.number_input(
-        "カテゴリごとの質問数",
-        min_value=1,
-        value=5,
-        step=1,
-        help="各カテゴリで生成する質問の総数",
+    question_mode = st.radio(
+        "質問数の指定方法",
+        ["カテゴリごとの質問数", "全カテゴリ合計質問数"],
+        help="カテゴリ単位で固定数を生成するか、全カテゴリ合計で生成数を指定します",
     )
+    if question_mode == "カテゴリごとの質問数":
+        num_questions_input = st.number_input(
+            "カテゴリごとの質問数",
+            min_value=1,
+            value=5,
+            step=1,
+            help="各カテゴリで生成する質問の総数",
+        )
+    else:
+        num_questions_input = st.number_input(
+            "全カテゴリ合計質問数",
+            min_value=1,
+            value=5,
+            step=1,
+            help="全カテゴリで生成する質問の総数",
+        )
     block_size = st.number_input(
         "1回の生成での質問数",
         min_value=1,
@@ -139,11 +153,20 @@ with col2:
                 st.success(f"カテゴリが生成されました: {', '.join(categories)}")
                 
                 # 各カテゴリでQ&Aを生成
-                for category in categories:
+                if question_mode == "全カテゴリ合計質問数":
+                    total_questions = num_questions_input
+                    num_categories = len(categories)
+                    base = total_questions // num_categories
+                    remainder = total_questions % num_categories
+                    per_category_counts = [base + (1 if i < remainder else 0) for i in range(num_categories)]
+                else:
+                    per_category_counts = [num_questions_input] * len(categories)
+
+                for category, target_count in zip(categories, per_category_counts):
                     current_temp = 0.0
                     generated = 0
-                    while generated < num_questions:
-                        num_to_generate = min(block_size, num_questions - generated)
+                    while generated < target_count:
+                        num_to_generate = min(block_size, target_count - generated)
                         with st.spinner(f"カテゴリ「{category}」のQ&Aを生成中..."):
                             qa_pairs = generator.generate_qa_for_category(text_content, category, current_temp, num_questions=num_to_generate)
 
