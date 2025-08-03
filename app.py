@@ -13,7 +13,11 @@ from qna_generator.data_exporter import (
     export_for_rag,
     export_for_finetuning,
 )
-from qna_generator.utils import calculate_temperature_step, increment_temperature
+from qna_generator.utils import (
+    calculate_temperature_step,
+    increment_temperature,
+    split_text_into_chunks,
+)
 
 
 @st.cache_data(show_spinner=False)
@@ -180,65 +184,83 @@ with col2:
     
     if text_content and st.session_state.api_key:
         generator = AIQAGenerator(st.session_state.api_key, model=st.session_state.model)
-        
+        chunks = split_text_into_chunks(text_content, max_tokens=3000)
+
         if st.button("カテゴリとQ&Aを生成"):
-            with st.spinner("カテゴリを生成中..."):
-                categories = generator.generate_categories(text_content, 0.0, num_categories)
-            
-            if categories and not any("エラー" in str(cat) for cat in categories):
-                st.success(f"カテゴリが生成されました: {', '.join(categories)}")
+            all_success = True
+            for chunk_index, chunk in enumerate(chunks, start=1):
+                with st.spinner(f"チャンク{chunk_index}のカテゴリを生成中..."):
+                    categories = generator.generate_categories(chunk, 0.0, num_categories)
 
-                # 各カテゴリでQ&Aを生成
-                if question_mode == "全カテゴリ合計質問数":
-                    total_questions = num_questions_input
-                    generated_category_count = len(categories)
-                    base = total_questions // generated_category_count
-                    remainder = total_questions % generated_category_count
-                    per_category_counts = [base + (1 if i < remainder else 0) for i in range(generated_category_count)]
+                if categories and not any("エラー" in str(cat) for cat in categories):
+                    st.success(
+                        f"チャンク{chunk_index}でカテゴリが生成されました: {', '.join(categories)}"
+                    )
+
+                    # 各カテゴリでQ&Aを生成
+                    if question_mode == "全カテゴリ合計質問数":
+                        total_questions = num_questions_input
+                        generated_category_count = len(categories)
+                        base = total_questions // generated_category_count
+                        remainder = total_questions % generated_category_count
+                        per_category_counts = [
+                            base + (1 if i < remainder else 0)
+                            for i in range(generated_category_count)
+                        ]
+                    else:
+                        per_category_counts = [num_questions_input] * len(categories)
+
+                    for category, target_count in zip(categories, per_category_counts):
+                        current_temp = 0.0
+                        generated = 0
+                        step = calculate_temperature_step(target_count)
+                        next_step = step
+                        while generated < target_count:
+                            num_to_generate = min(block_size, target_count - generated)
+                            with st.spinner(
+                                f"チャンク{chunk_index}カテゴリ「{category}」のQ&Aを生成中..."
+                            ):
+                                result = generator.generate_qa_for_category(
+                                    chunk, category, current_temp, num_questions=num_to_generate
+                                )
+
+                            if result and not result.get("error"):
+                                for qa in result.get("qa_pairs", []):
+                                    qa_data = {
+                                        "category": category,
+                                        "question": qa.get("question", ""),
+                                        "answer": qa.get("answer", ""),
+                                        "source": qa.get("source", ""),
+                                        "source_info": source_info,
+                                        "temperature": current_temp,
+                                    }
+                                    st.session_state.qa_data.append(qa_data)
+                                generated += len(result.get("qa_pairs", []))
+
+                                while generated >= next_step:
+                                    current_temp = increment_temperature(current_temp)
+                                    next_step += step
+                            else:
+                                error_message = result.get("error") if isinstance(result, dict) else None
+                                if not error_message:
+                                    error_message = "Q&Aの生成中に不明なエラーが発生しました"
+                                st.error(
+                                    f"チャンク{chunk_index}カテゴリ「{category}」でエラーが発生しました: {error_message}"
+                                )
+                                st.info("問題が解消したら再度お試しください。")
+                                all_success = False
+                                break
+
+                    if not all_success:
+                        break
                 else:
-                    per_category_counts = [num_questions_input] * len(categories)
+                    st.error(f"チャンク{chunk_index}でカテゴリ生成エラー: {categories}")
+                    st.info("設定を確認して再度お試しください。")
+                    all_success = False
+                    break
 
-                all_success = True
-                for category, target_count in zip(categories, per_category_counts):
-                    current_temp = 0.0
-                    generated = 0
-                    step = calculate_temperature_step(target_count)
-                    next_step = step
-                    while generated < target_count:
-                        num_to_generate = min(block_size, target_count - generated)
-                        with st.spinner(f"カテゴリ「{category}」のQ&Aを生成中..."):
-                            result = generator.generate_qa_for_category(text_content, category, current_temp, num_questions=num_to_generate)
-
-                        if result and not result.get("error"):
-                            for qa in result.get("qa_pairs", []):
-                                qa_data = {
-                                    "category": category,
-                                    "question": qa.get("question", ""),
-                                    "answer": qa.get("answer", ""),
-                                    "source": qa.get("source", ""),
-                                    "source_info": source_info,
-                                    "temperature": current_temp,
-                                }
-                                st.session_state.qa_data.append(qa_data)
-                            generated += len(result.get("qa_pairs", []))
-
-                            while generated >= next_step:
-                                current_temp = increment_temperature(current_temp)
-                                next_step += step
-                        else:
-                            error_message = result.get("error") if isinstance(result, dict) else None
-                            if not error_message:
-                                error_message = "Q&Aの生成中に不明なエラーが発生しました"
-                            st.error(f"カテゴリ「{category}」でエラーが発生しました: {error_message}")
-                            st.info("問題が解消したら再度お試しください。")
-                            all_success = False
-                            break
-
-                if all_success:
-                    st.success("Q&Aの生成が完了しました")
-            else:
-                st.error(f"カテゴリ生成エラー: {categories}")
-                st.info("設定を確認して再度お試しください。")
+            if all_success:
+                st.success("Q&Aの生成が完了しました")
     
     elif not st.session_state.api_key:
         st.warning("OpenAI APIキーを入力してください")
