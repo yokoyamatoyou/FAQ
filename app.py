@@ -47,14 +47,20 @@ with st.sidebar:
     )
     st.session_state.api_key = api_key
     
-    # 温度設定
-    temperature = st.slider(
-        "AI温度設定",
-        min_value=0.0,
-        max_value=0.8,
-        value=0.0,
-        step=0.1,
-        help="0.0: 最も確実な回答, 0.8: より創造的な回答"
+    # 生成する質問数とブロックサイズ
+    num_questions = st.number_input(
+        "カテゴリごとの質問数",
+        min_value=1,
+        value=5,
+        step=1,
+        help="各カテゴリで生成する質問の総数",
+    )
+    block_size = st.number_input(
+        "1回の生成での質問数",
+        min_value=1,
+        value=1,
+        step=1,
+        help="一度に生成する質問数",
     )
 
 # メインコンテンツ
@@ -127,29 +133,36 @@ with col2:
         
         if st.button("カテゴリとQ&Aを生成"):
             with st.spinner("カテゴリを生成中..."):
-                categories = generator.generate_categories(text_content, temperature)
+                categories = generator.generate_categories(text_content, 0.0)
             
             if categories and not any("エラー" in str(cat) for cat in categories):
                 st.success(f"カテゴリが生成されました: {', '.join(categories)}")
                 
                 # 各カテゴリでQ&Aを生成
-                for i, category in enumerate(categories):
-                    with st.spinner(f"カテゴリ「{category}」のQ&Aを生成中..."):
-                        qa_pairs = generator.generate_qa_for_category(text_content, category, temperature)
-                    
-                    if qa_pairs and not any("error" in qa for qa in qa_pairs):
-                        # セッション状態にQ&Aデータを保存
-                        for qa in qa_pairs:
-                            qa_data = {
-                                "category": category,
-                                "question": qa.get("question", ""),
-                                "answer": qa.get("answer", ""),
-                                "source": qa.get("source", ""),
-                                "source_info": source_info,
-                                "temperature": temperature
-                            }
-                            st.session_state.qa_data.append(qa_data)
-                
+                for category in categories:
+                    current_temp = 0.0
+                    generated = 0
+                    while generated < num_questions:
+                        num_to_generate = min(block_size, num_questions - generated)
+                        with st.spinner(f"カテゴリ「{category}」のQ&Aを生成中..."):
+                            qa_pairs = generator.generate_qa_for_category(text_content, category, current_temp, num_questions=num_to_generate)
+
+                        if qa_pairs and not any("error" in qa for qa in qa_pairs):
+                            for qa in qa_pairs:
+                                qa_data = {
+                                    "category": category,
+                                    "question": qa.get("question", ""),
+                                    "answer": qa.get("answer", ""),
+                                    "source": qa.get("source", ""),
+                                    "source_info": source_info,
+                                    "temperature": current_temp,
+                                }
+                                st.session_state.qa_data.append(qa_data)
+                            generated += len(qa_pairs)
+                            current_temp = min(current_temp + 0.1, 0.8)
+                        else:
+                            break
+
                 st.success("Q&Aの生成が完了しました")
             else:
                 st.error(f"カテゴリ生成エラー: {categories}")
