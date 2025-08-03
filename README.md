@@ -32,5 +32,5 @@ pip install streamlit openai requests beautifulsoup4 python-docx pymupdf
 
 ## Documentation
 
-Further details about the Q&A generation process and data formats are available in the module's own documentation: [`qna_generator/qna_generator/README.md`](qna_generator/qna_generator/README.md).
+Further details about the Q&A generation process and data formats are available in the module's own documentation: [`qna_generator/README.md`](qna_generator/README.md).
 
