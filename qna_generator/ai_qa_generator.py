@@ -1,6 +1,10 @@
 
 from openai import OpenAI
 import os
+import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AIQAGenerator:
     def __init__(self, api_key):
@@ -45,18 +49,38 @@ class AIQAGenerator:
         qa_list = []
         lines = qa_text.split("\n")
         current_qa = {}
+        pattern = re.compile(r"^(質問|回答|引用元)\s*\d*\s*:\s*(.+)$")
         for line in lines:
             line = line.strip()
-            if line.startswith("質問"):
+            if not line:
+                continue
+            match = pattern.match(line)
+            if not match:
+                logger.warning("Skipping malformed line: %s", line)
+                continue
+            key_jp, value = match.group(1), match.group(2).strip()
+            if key_jp == "質問":
                 if current_qa:
-                    qa_list.append(current_qa)
-                current_qa = {"question": line.split(": ", 1)[1]}
-            elif line.startswith("回答"):
-                current_qa["answer"] = line.split(": ", 1)[1]
-            elif line.startswith("引用元"):
-                current_qa["source"] = line.split(": ", 1)[1]
+                    if all(k in current_qa for k in ("question", "answer", "source")):
+                        qa_list.append(current_qa)
+                    else:
+                        logger.warning("Incomplete QA pair skipped: %s", current_qa)
+                current_qa = {"question": value}
+            elif key_jp == "回答":
+                if current_qa:
+                    current_qa["answer"] = value
+                else:
+                    logger.warning("Answer without question: %s", line)
+            elif key_jp == "引用元":
+                if current_qa:
+                    current_qa["source"] = value
+                else:
+                    logger.warning("Source without question: %s", line)
         if current_qa:
-            qa_list.append(current_qa)
+            if all(k in current_qa for k in ("question", "answer", "source")):
+                qa_list.append(current_qa)
+            else:
+                logger.warning("Incomplete QA pair skipped: %s", current_qa)
         return qa_list
 
 
