@@ -6,6 +6,11 @@ from docx import Document
 import io
 
 def extract_text_from_url(url):
+    """Fetch and clean text content from the given URL.
+
+    Raises:
+        requests.exceptions.RequestException: ネットワーク関連のエラーが発生した場合。
+    """
     try:
         response = requests.get(url)
         response.raise_for_status()  # HTTPエラーをチェック
@@ -17,7 +22,7 @@ def extract_text_from_url(url):
         # 複数の空白や改行を一つにまとめる
         lines = (line.strip() for line in text.splitlines())
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-        text = '\n'.join(chunk for chunk in chunks if chunk)
+        text = "\n".join(chunk for chunk in chunks if chunk)
         return text
     except requests.exceptions.RequestException as e:
         raise requests.exceptions.RequestException(
@@ -25,6 +30,7 @@ def extract_text_from_url(url):
         ) from e
 
 def extract_text_from_pdf(file_path):
+    """Extract text from a PDF file."""
     text = ""
     try:
         with fitz.open(file_path) as doc:
@@ -35,6 +41,7 @@ def extract_text_from_pdf(file_path):
         raise RuntimeError(f"PDFからのテキスト抽出エラー: {e}") from e
 
 def extract_text_from_docx(file_path):
+    """Extract text from a DOCX file."""
     text = ""
     try:
         doc = Document(file_path)
@@ -46,6 +53,7 @@ def extract_text_from_docx(file_path):
 
 # Streamlitのfile_uploaderでアップロードされたファイルオブジェクトを処理するための関数
 def extract_text_from_uploaded_file(uploaded_file, file_type):
+    """Handle text extraction for Streamlit-uploaded files."""
     if file_type == "pdf":
         try:
             # アップロードされたファイルのバイトデータを直接使用
