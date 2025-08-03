@@ -4,6 +4,7 @@ import os
 import requests
 import hashlib
 import io
+import asyncio
 from qna_generator.data_processor import extract_text_from_url, extract_text_from_uploaded_file
 from qna_generator.ai_qa_generator import AIQAGenerator
 from qna_generator.data_exporter import (
@@ -210,20 +211,21 @@ with col2:
                     else:
                         per_category_counts = [num_questions_input] * len(categories)
 
-                    for category, target_count in zip(categories, per_category_counts):
+                    async def generate_category_qa(category, target_count):
                         current_temp = 0.0
                         generated = 0
                         step = calculate_temperature_step(target_count)
                         next_step = step
+                        qa_list = []
                         while generated < target_count:
                             num_to_generate = min(block_size, target_count - generated)
-                            with st.spinner(
-                                f"チャンク{chunk_index}カテゴリ「{category}」のQ&Aを生成中..."
-                            ):
-                                result = generator.generate_qa_for_category(
-                                    chunk, category, current_temp, num_questions=num_to_generate
-                                )
-
+                            result = await asyncio.to_thread(
+                                generator.generate_qa_for_category,
+                                chunk,
+                                category,
+                                current_temp,
+                                num_to_generate,
+                            )
                             if result and not result.get("error"):
                                 for qa in result.get("qa_pairs", []):
                                     qa_data = {
@@ -234,23 +236,36 @@ with col2:
                                         "source_info": source_info,
                                         "temperature": current_temp,
                                     }
-                                    st.session_state.qa_data.append(qa_data)
+                                    qa_list.append(qa_data)
                                 generated += len(result.get("qa_pairs", []))
-
                                 while generated >= next_step:
                                     current_temp = increment_temperature(current_temp)
                                     next_step += step
                             else:
-                                error_message = result.get("error") if isinstance(result, dict) else None
-                                if not error_message:
-                                    error_message = "Q&Aの生成中に不明なエラーが発生しました"
-                                st.error(
-                                    f"チャンク{chunk_index}カテゴリ「{category}」でエラーが発生しました: {error_message}"
+                                error_message = (
+                                    result.get("error")
+                                    if isinstance(result, dict)
+                                    else "Q&Aの生成中に不明なエラーが発生しました"
                                 )
-                                st.info("問題が解消したら再度お試しください。")
-                                all_success = False
-                                break
+                                return {"error": error_message, "category": category}
+                        return {"qa_list": qa_list}
 
+                    tasks = [
+                        generate_category_qa(category, target_count)
+                        for category, target_count in zip(categories, per_category_counts)
+                    ]
+                    with st.spinner(f"チャンク{chunk_index}のQ&Aを生成中..."):
+                        results = asyncio.run(asyncio.gather(*tasks))
+
+                    for res in results:
+                        if res.get("error"):
+                            st.error(
+                                f"チャンク{chunk_index}カテゴリ「{res['category']}」でエラーが発生しました: {res['error']}"
+                            )
+                            st.info("問題が解消したら再度お試しください。")
+                            all_success = False
+                        else:
+                            st.session_state.qa_data.extend(res["qa_list"])
                     if not all_success:
                         break
                 else:
