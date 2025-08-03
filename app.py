@@ -2,6 +2,8 @@ import streamlit as st
 import json
 import os
 import requests
+import hashlib
+import io
 from qna_generator.data_processor import extract_text_from_url, extract_text_from_uploaded_file
 from qna_generator.ai_qa_generator import AIQAGenerator
 from qna_generator.data_exporter import (
@@ -12,6 +14,18 @@ from qna_generator.data_exporter import (
     export_for_finetuning,
 )
 from qna_generator.utils import calculate_temperature_step, increment_temperature
+
+
+@st.cache_data(show_spinner=False)
+def cached_extract_text_from_url(url: str, url_hash: str) -> str:
+    return extract_text_from_url(url)
+
+
+@st.cache_data(show_spinner=False)
+def cached_extract_text_from_uploaded_file(
+    file_bytes: bytes, file_type: str, file_hash: str
+) -> str:
+    return extract_text_from_uploaded_file(io.BytesIO(file_bytes), file_type)
 
 
 def _has_error_prefix(value: str) -> bool:
@@ -117,7 +131,8 @@ with col1:
             if url:
                 with st.spinner("テキストを抽出中..."):
                     try:
-                        result = extract_text_from_url(url)
+                        url_hash = hashlib.md5(url.encode()).hexdigest()
+                        result = cached_extract_text_from_url(url, url_hash)
                     except requests.exceptions.RequestException as e:
                         st.error(str(e))
                     else:
@@ -142,7 +157,9 @@ with col1:
             if st.button("ファイルからテキストを抽出"):
                 with st.spinner("テキストを抽出中..."):
                     try:
-                        result = extract_text_from_uploaded_file(uploaded_file, file_type)
+                        file_bytes = uploaded_file.getvalue()
+                        file_hash = hashlib.md5(file_bytes).hexdigest()
+                        result = cached_extract_text_from_uploaded_file(file_bytes, file_type, file_hash)
                     except Exception as e:
                         st.error(str(e))
                     else:
