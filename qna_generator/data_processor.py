@@ -20,7 +20,9 @@ def extract_text_from_url(url):
         text = '\n'.join(chunk for chunk in chunks if chunk)
         return text
     except requests.exceptions.RequestException as e:
-        return f"URLからのテキスト抽出エラー: {e}"
+        raise requests.exceptions.RequestException(
+            f"URLからのテキスト抽出エラー: {e}"
+        )
 
 def extract_text_from_pdf(file_path):
     text = ""
@@ -30,7 +32,7 @@ def extract_text_from_pdf(file_path):
                 text += page.get_text()
         return text
     except Exception as e:
-        return f"PDFからのテキスト抽出エラー: {e}"
+        raise RuntimeError(f"PDFからのテキスト抽出エラー: {e}")
 
 def extract_text_from_docx(file_path):
     text = ""
@@ -40,27 +42,33 @@ def extract_text_from_docx(file_path):
             text += para.text + "\n"
         return text
     except Exception as e:
-        return f"DOCXからのテキスト抽出エラー: {e}"
+        raise RuntimeError(f"DOCXからのテキスト抽出エラー: {e}")
 
 # Streamlitのfile_uploaderでアップロードされたファイルオブジェクトを処理するための関数
 def extract_text_from_uploaded_file(uploaded_file, file_type):
     if file_type == "pdf":
-        # アップロードされたファイルのバイトデータを直接使用
-        doc = fitz.open(stream=uploaded_file.getvalue(), filetype="pdf")
-        text = ""
-        for page in doc:
-            text += page.get_text()
-        doc.close()
-        return text
+        try:
+            # アップロードされたファイルのバイトデータを直接使用
+            doc = fitz.open(stream=uploaded_file.getvalue(), filetype="pdf")
+            text = ""
+            for page in doc:
+                text += page.get_text()
+            doc.close()
+            return text
+        except Exception as e:
+            raise RuntimeError(f"PDFからのテキスト抽出エラー: {e}")
     elif file_type == "docx":
-        # アップロードされたファイルのバイトデータを直接使用
-        doc = Document(io.BytesIO(uploaded_file.getvalue()))
-        text = ""
-        for para in doc.paragraphs:
-            text += para.text + "\n"
-        return text
+        try:
+            # アップロードされたファイルのバイトデータを直接使用
+            doc = Document(io.BytesIO(uploaded_file.getvalue()))
+            text = ""
+            for para in doc.paragraphs:
+                text += para.text + "\n"
+            return text
+        except Exception as e:
+            raise RuntimeError(f"DOCXからのテキスト抽出エラー: {e}")
     else:
-        return "サポートされていないファイル形式です。"
+        raise ValueError("サポートされていないファイル形式です。")
 
 
 
