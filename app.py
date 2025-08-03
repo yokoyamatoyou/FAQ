@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import requests
 from qna_generator.data_processor import extract_text_from_url, extract_text_from_uploaded_file
 from qna_generator.ai_qa_generator import AIQAGenerator
 from qna_generator.data_exporter import (
@@ -71,9 +72,18 @@ with col1:
         if st.button("URLからテキストを抽出"):
             if url:
                 with st.spinner("テキストを抽出中..."):
-                    text_content = extract_text_from_url(url)
-                    source_info = f"URL: {url}"
-                    st.success("テキストの抽出が完了しました")
+                    try:
+                        result = extract_text_from_url(url)
+                        if isinstance(result, str) and result.startswith(
+                            "URLからのテキスト抽出エラー"
+                        ):
+                            st.error(result)
+                        else:
+                            text_content = result
+                            source_info = f"URL: {url}"
+                            st.success("テキストの抽出が完了しました")
+                    except requests.exceptions.RequestException as e:
+                        st.error(str(e))
             else:
                 st.error("URLを入力してください")
     
@@ -88,9 +98,22 @@ with col1:
             file_type = uploaded_file.name.split('.')[-1].lower()
             if st.button("ファイルからテキストを抽出"):
                 with st.spinner("テキストを抽出中..."):
-                    text_content = extract_text_from_uploaded_file(uploaded_file, file_type)
-                    source_info = f"ファイル: {uploaded_file.name}"
-                    st.success("テキストの抽出が完了しました")
+                    try:
+                        result = extract_text_from_uploaded_file(uploaded_file, file_type)
+                        if isinstance(result, str) and result.startswith(
+                            (
+                                "PDFからのテキスト抽出エラー",
+                                "DOCXからのテキスト抽出エラー",
+                                "サポートされていないファイル形式",
+                            )
+                        ):
+                            st.error(result)
+                        else:
+                            text_content = result
+                            source_info = f"ファイル: {uploaded_file.name}"
+                            st.success("テキストの抽出が完了しました")
+                    except Exception as e:
+                        st.error(str(e))
     
     # 抽出されたテキストの表示
     if text_content:
