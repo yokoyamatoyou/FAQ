@@ -3,7 +3,8 @@ import requests
 from bs4 import BeautifulSoup
 import fitz  # PyMuPDF
 from docx import Document
-import io
+
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
 
 def extract_text_from_url(url):
     """Fetch and clean text content from the given URL.
@@ -41,12 +42,10 @@ def extract_text_from_url(url):
 
 def extract_text_from_pdf(file_path):
     """Extract text from a PDF file."""
-    text = ""
     try:
         with fitz.open(file_path) as doc:
-            for page in doc:
-                text += page.get_text()
-        return text
+            text_parts = [page.get_text() for page in doc]
+        return "".join(text_parts)
     except Exception as e:
         raise RuntimeError(f"PDFからのテキスト抽出エラー: {e}") from e
 
@@ -64,25 +63,24 @@ def extract_text_from_docx(file_path):
 # Streamlitのfile_uploaderでアップロードされたファイルオブジェクトを処理するための関数
 def extract_text_from_uploaded_file(uploaded_file, file_type):
     """Handle text extraction for Streamlit-uploaded files."""
+    if uploaded_file.size > MAX_UPLOAD_SIZE:
+        raise ValueError("アップロードされたファイルサイズが上限(10MB)を超えています。")
+
+    uploaded_file.seek(0)
+
     if file_type == "pdf":
         try:
-            # アップロードされたファイルのバイトデータを直接使用
-            doc = fitz.open(stream=uploaded_file.getvalue(), filetype="pdf")
-            text = ""
-            for page in doc:
-                text += page.get_text()
-            doc.close()
-            return text
+            pdf_bytes = uploaded_file.read()
+            with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+                text_parts = [page.get_text() for page in doc]
+            return "".join(text_parts)
         except Exception as e:
             raise RuntimeError(f"PDFからのテキスト抽出エラー: {e}") from e
     elif file_type == "docx":
         try:
-            # アップロードされたファイルのバイトデータを直接使用
-            doc = Document(io.BytesIO(uploaded_file.getvalue()))
-            text = ""
-            for para in doc.paragraphs:
-                text += para.text + "\n"
-            return text
+            doc = Document(uploaded_file)
+            text_parts = [para.text + "\n" for para in doc.paragraphs]
+            return "".join(text_parts)
         except Exception as e:
             raise RuntimeError(f"DOCXからのテキスト抽出エラー: {e}") from e
     else:
