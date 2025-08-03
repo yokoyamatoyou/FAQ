@@ -258,16 +258,21 @@ if st.session_state.qa_data:
     
     # カテゴリ別に表示
     categories = list(set([qa["category"] for qa in st.session_state.qa_data]))
-    
+
     for category in categories:
         st.subheader(f"カテゴリ: {category}")
-        category_qa = [qa for qa in st.session_state.qa_data if qa["category"] == category]
-        
-        for i, qa in enumerate(category_qa):
+        category_indices = [idx for idx, qa in enumerate(st.session_state.qa_data) if qa["category"] == category]
+
+        for i, idx in enumerate(category_indices):
+            qa = st.session_state.qa_data[idx]
             with st.expander(f"Q{i+1}: {qa['question'][:50]}..."):
-                st.write(f"**質問:** {qa['question']}")
-                st.write(f"**回答:** {qa['answer']}")
-                
+                new_question = st.text_input("質問", value=qa["question"], key=f"question_{idx}")
+                new_answer = st.text_area("回答", value=qa["answer"], key=f"answer_{idx}")
+                if st.button("保存", key=f"save_{idx}"):
+                    st.session_state.qa_data[idx]["question"] = new_question
+                    st.session_state.qa_data[idx]["answer"] = new_answer
+                    st.success("保存しました")
+
                 # 引用元を折りたたみ表示
                 with st.expander("引用元を表示"):
                     st.write(f"**引用元:** {qa['source']}")
