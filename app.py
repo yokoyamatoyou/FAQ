@@ -12,6 +12,11 @@ from qna_generator.data_exporter import (
     export_for_finetuning,
 )
 
+
+def _has_error_prefix(value: str) -> bool:
+    """Return True if the text looks like an error message."""
+    return isinstance(value, str) and value.startswith(("Error", "エラー"))
+
 # ページ設定
 st.set_page_config(
     page_title="Q&A自動生成システム",
@@ -77,7 +82,7 @@ with col1:
                     except requests.exceptions.RequestException as e:
                         st.error(str(e))
                     else:
-                        if isinstance(result, str) and result.startswith("Error:"):
+                        if _has_error_prefix(result):
                             st.error(result)
                         else:
                             text_content = result
@@ -102,7 +107,7 @@ with col1:
                     except Exception as e:
                         st.error(str(e))
                     else:
-                        if isinstance(result, str) and result.startswith("Error:"):
+                        if _has_error_prefix(result):
                             st.error(result)
                         else:
                             text_content = result
