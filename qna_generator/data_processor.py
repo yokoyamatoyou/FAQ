@@ -8,11 +8,17 @@ import io
 def extract_text_from_url(url):
     """Fetch and clean text content from the given URL.
 
+    A 10-second timeout and a User-Agent header are used for the request.
+
     Raises:
         requests.exceptions.RequestException: ネットワーク関連のエラーが発生した場合。
     """
     try:
-        response = requests.get(url)
+        response = requests.get(
+            url,
+            timeout=10,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
         response.raise_for_status()  # HTTPエラーをチェック
         soup = BeautifulSoup(response.text, 'html.parser')
         # スクリプトやスタイルタグを除去
@@ -24,6 +30,10 @@ def extract_text_from_url(url):
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
         text = "\n".join(chunk for chunk in chunks if chunk)
         return text
+    except requests.exceptions.Timeout as e:
+        raise requests.exceptions.RequestException(
+            f"URLからのテキスト抽出エラー: タイムアウトが発生しました: {e}"
+        ) from e
     except requests.exceptions.RequestException as e:
         raise requests.exceptions.RequestException(
             f"URLからのテキスト抽出エラー: {e}"
