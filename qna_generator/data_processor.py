@@ -22,7 +22,7 @@ def extract_text_from_url(url):
     except requests.exceptions.RequestException as e:
         raise requests.exceptions.RequestException(
             f"URLからのテキスト抽出エラー: {e}"
-        )
+        ) from e
 
 def extract_text_from_pdf(file_path):
     text = ""
@@ -32,7 +32,7 @@ def extract_text_from_pdf(file_path):
                 text += page.get_text()
         return text
     except Exception as e:
-        raise RuntimeError(f"PDFからのテキスト抽出エラー: {e}")
+        raise RuntimeError(f"PDFからのテキスト抽出エラー: {e}") from e
 
 def extract_text_from_docx(file_path):
     text = ""
@@ -42,7 +42,7 @@ def extract_text_from_docx(file_path):
             text += para.text + "\n"
         return text
     except Exception as e:
-        raise RuntimeError(f"DOCXからのテキスト抽出エラー: {e}")
+        raise RuntimeError(f"DOCXからのテキスト抽出エラー: {e}") from e
 
 # Streamlitのfile_uploaderでアップロードされたファイルオブジェクトを処理するための関数
 def extract_text_from_uploaded_file(uploaded_file, file_type):
@@ -56,7 +56,7 @@ def extract_text_from_uploaded_file(uploaded_file, file_type):
             doc.close()
             return text
         except Exception as e:
-            raise RuntimeError(f"PDFからのテキスト抽出エラー: {e}")
+            raise RuntimeError(f"PDFからのテキスト抽出エラー: {e}") from e
     elif file_type == "docx":
         try:
             # アップロードされたファイルのバイトデータを直接使用
@@ -66,7 +66,7 @@ def extract_text_from_uploaded_file(uploaded_file, file_type):
                 text += para.text + "\n"
             return text
         except Exception as e:
-            raise RuntimeError(f"DOCXからのテキスト抽出エラー: {e}")
+            raise RuntimeError(f"DOCXからのテキスト抽出エラー: {e}") from e
     else:
         raise ValueError("サポートされていないファイル形式です。")
 
