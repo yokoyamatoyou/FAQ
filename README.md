@@ -65,3 +65,27 @@ generator = AIQAGenerator(api_key="YOUR_API_KEY", model="gpt-4o")
 
 Further details about the Q&A generation process and data formats are available in the module's own documentation: [`qna_generator/README.md`](qna_generator/README.md).
 
+## Advanced Settings
+
+The application exposes several helper functions that tune how questions are produced and how source text is handled.
+
+### Temperature control
+
+- **`calculate_temperature_step(question_count, max_temp=0.8, increment=0.1)`** –
+  decides how many questions are generated before the temperature is raised. The
+  step size is derived from the total number of questions and the temperature range.
+- **`increment_temperature(current_temp, increment=0.1, max_temp=0.8)`** – raises
+  the temperature by `increment` without exceeding `max_temp`.
+
+**Example:** If the sidebar is set to **カテゴリごとの質問数 = 10** and
+**1回の生成での質問数 = 2**, then `calculate_temperature_step(10)` returns `2`.
+During generation the temperature starts at `0.0` and `increment_temperature`
+raises it to `0.1`, `0.2`, and so on after every two questions.
+
+### Text chunking
+
+- **`split_text_into_chunks(text, max_tokens)`** – divides the extracted text into
+  chunks of up to `max_tokens` words (the app uses `max_tokens=3000`). Adjusting
+  `max_tokens` allows processing smaller or larger chunks. This value can be
+  exposed in the sidebar as an advanced option if you need to tune chunk size.
+
