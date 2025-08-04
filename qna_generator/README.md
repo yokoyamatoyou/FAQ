@@ -29,5 +29,41 @@ qa_pairs = generator.generate_qa_for_category(text, categories[0])
 export_to_jsonl(qa_pairs, "qa_data.jsonl")
 ```
 
+### Export for RAG and fine-tuning
+
+```python
+from qna_generator.data_exporter import export_for_rag, export_for_finetuning
+
+# RAG/search dataset
+rag_path = export_for_rag(qa_pairs)
+
+# Fine-tuning dataset
+finetune_path = export_for_finetuning(qa_pairs)
+```
+
+Each line of the RAG file contains an object like:
+
+```json
+{
+  "id": "category_0",
+  "text": "質問: ...\n回答: ...",
+  "metadata": {"category": "...", "source": "...", "source_info": "...", "temperature": ...}
+}
+```
+
+Each line of the fine-tuning file contains:
+
+```json
+{
+  "messages": [
+    {"role": "system", "content": "あなたは..."},
+    {"role": "user", "content": "..."},
+    {"role": "assistant", "content": "..."}
+  ]
+}
+```
+
+`export_for_rag` creates search-ready documents for retrieval-augmented generation, while `export_for_finetuning` prepares conversation data for model training.
+
 These utilities are designed to be used by the Streamlit app in the repository root but can also be integrated into other Python projects.
 
