@@ -49,6 +49,19 @@ finetune_file = export_for_finetuning(qa_data)  # -> finetuning_data_YYYYMMDD_HH
 
 Both functions generate [JSON Lines](https://jsonlines.org/) files containing one record per line.
 
+## Command-line interface
+
+You can also run the Q&A generator from the command line. From the `qna_generator`
+directory run:
+
+```bash
+python cli.py --url-list urls.txt --output qa.jsonl
+```
+
+`urls.txt` should contain one URL per line. The generated Q&A pairs are written to
+`qa.jsonl`. Use `--file-list` instead of `--url-list` to process local PDF or
+DOCX files.
+
 ## Model configuration
 
 The "Settings" sidebar includes a **model** selector. The chosen model is used for both category and Q&A generation.
